@@ -6,6 +6,7 @@
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
+#define FPS 10
 
 int main(int argc, char **argv)
 {
@@ -30,8 +31,8 @@ int main(int argc, char **argv)
 		double x = SCREEN_WIDTH / 2;
 		double y = SCREEN_HEIGHT / 2;
 		double angle = 0.0f;
-		double aceleracion = 1;
-		void acelerar(){
+		double aceleracion = 0.1f; // pixels / seg^2
+		void update(){
 			SDL_Log("player.x: %i",this->x);
 			SDL_Log("player.y: %i",this->y);
 			SDL_Log("player.angle: %0.10lf",this->angle);
@@ -49,59 +50,51 @@ int main(int argc, char **argv)
 	SDL_Event e; // Variable para eventos
 	// Ciclo del juego
 	while(!quit){
-		// Detener FPS
+		// Iniciar el conteo de tiempo para maximo de FPS
 		auto timerFps = SDL_GetTicks();
-		// Mostrar en pantalla
-	    // Copiar la imagen en la surface de la ventana
-	    SDL_Point centerPlayer = {25,25};
-	    SDL_Rect srcRectPlayer = {168,156,209-168,193-156};
-	    SDL_Rect dstRectPlayer = {player.x-25,player.y-25,50,50}; // Coordenadas y dimensiones en pantalla
-		SDL_RenderCopyEx(render, texturePlayer, &srcRectPlayer, &dstRectPlayer, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
-
-		// Renderizar (redibujar la pantalla) y limpiar (el render no la pantalla)
-		SDL_RenderPresent(render);
-		SDL_RenderClear(render);
-
-		timerFps = SDL_GetTicks() - timerFps;
-	    if (timerFps < 1000 / 30) {
-	        SDL_Delay((1000 / 30) - timerFps);
-	    }
 
 		if(SDL_PollEvent(&e) != 0){
 			if(e.type == SDL_QUIT){
 				quit = true;
-			} else if (e.type == SDL_KEYUP || e.type == SDL_KEYDOWN){
+			} else if (e.type == SDL_KEYUP || e.type == SDL_KEYDOWN) {
 				const Uint8 *state = SDL_GetKeyboardState(NULL);
-				if (state[SDL_SCANCODE_LEFT] && state[SDL_SCANCODE_UP]) {
-				    //SDL_Log("Left and Up Keys Pressed.\n");
-				    player.angle -= 2;
-				    player.aceleracion += 1.05;
-				    //player.x += player.x * 0.016;
-				} else if (state[SDL_SCANCODE_RIGHT] && state[SDL_SCANCODE_UP]) {
-				    //SDL_Log("Right and Up Keys Pressed.\n");
-				    player.angle += 2;
-				    player.aceleracion += 1.05;
-				    //player.x += player.x * 0.016;
-				} else if (state[SDL_SCANCODE_UP]) {
-				    //SDL_Log("Up Key Pressed.\n");
-					player.aceleracion += 1.05;
-				} else {
-					if (player.aceleracion > 0)
+				if (state[SDL_SCANCODE_UP])
+				{
+					if (player.aceleracion < 2.5)
 					{
-						player.aceleracion -= 0.005;
+						player.aceleracion = 2.5;
 					}
+					if (player.aceleracion < 50.0 - player.aceleracion * 0.75)
+					{
+						player.aceleracion += player.aceleracion * 0.75;
+					}
+					if (player.angle <= 0)
+					{
+						player.angle = 0.2;
+					}
+					if (state[SDL_SCANCODE_LEFT]) {
+					    //SDL_Log("Left and Up Keys Pressed.\n");
+					    player.angle -= 15;
+					} else if (state[SDL_SCANCODE_RIGHT]) {
+					    //SDL_Log("Right and Up Keys Pressed.\n");
+					    player.angle += 15;
+					}
+
 				}
-				player.acelerar();
 				if (state[SDL_SCANCODE_SPACE]) {
 				    //SDL_Log("<SPACE> is pressed.\n");
 				}
+				if (player.angle <= 0)
+					{
+						player.angle = 0.2;
+					}
 				if (state[SDL_SCANCODE_LEFT]) {
 				    //SDL_Log("Left Key Pressed.\n");
-				    player.angle -= 2;
+				    player.angle -= 15;
 				}
 				if (state[SDL_SCANCODE_RIGHT]) {
 				    //SDL_Log("Right Key Pressed.\n");
-				    player.angle += 2;
+				    player.angle += 15;
 				}
 				if (state[SDL_SCANCODE_ESCAPE]) {
 					//ESC Key Pressed.
@@ -117,24 +110,58 @@ int main(int argc, char **argv)
 					player.angle = 360 + player.angle;
 				}
 				//SDL_Log("%0.10lf", player.angle);
-				if (player.x < 0)
+				if (player.x <= 1)
 				{
-					player.x = SCREEN_WIDTH;
+					player.x = SCREEN_WIDTH - 1;
 				}
-				if (player.x > SCREEN_WIDTH)
+				if (player.x > SCREEN_WIDTH - 1)
 				{
-					player.x = 0;
+					player.x = 1;
 				}
-				if (player.y < 0)
+				if (player.y <= 1)
 				{
-					player.y = SCREEN_HEIGHT;
+					player.y = SCREEN_HEIGHT - 1;
 				}
-				if (player.y > SCREEN_HEIGHT)
+				if (player.y > SCREEN_HEIGHT - 1)
 				{
-					player.y = 0;
+					player.y = 1;
 				}
 			}
+		} else {
+			if (player.aceleracion > 0)
+			{
+				player.aceleracion -= player.aceleracion * 0.25;
+				SDL_Log("des aceleracion: %0.10lf", player.aceleracion);
+			} else {
+				player.aceleracion = 0;
+			}
 		}
+		player.update();
+
+		// Mostrar en pantalla
+	    // Copiar la imagen en la surface de la ventana
+	    SDL_Point centerPlayer = {25,25};
+	    SDL_Rect srcRectPlayer = {168,156,209-168,193-156};
+	    SDL_Rect dstRectPlayer = {player.x-25,player.y-25,50,50}; // Coordenadas y dimensiones en pantalla
+	    // Cuatro copias para las fronteras
+	    SDL_Rect dstRectPlayerC1 = {player.x-25 - SCREEN_WIDTH,player.y-25,50,50};
+	    SDL_Rect dstRectPlayerC2 = {player.x-25 + SCREEN_WIDTH,player.y-25,50,50};
+	    SDL_Rect dstRectPlayerC3 = {player.x-25,player.y-25 - SCREEN_HEIGHT,50,50};
+	    SDL_Rect dstRectPlayerC4 = {player.x-25,player.y-25 + SCREEN_HEIGHT,50,50};
+		SDL_RenderCopyEx(render, texturePlayer, &srcRectPlayer, &dstRectPlayer, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(render, texturePlayer, &srcRectPlayer, &dstRectPlayerC1, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(render, texturePlayer, &srcRectPlayer, &dstRectPlayerC2, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(render, texturePlayer, &srcRectPlayer, &dstRectPlayerC3, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(render, texturePlayer, &srcRectPlayer, &dstRectPlayerC4, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+
+		// Renderizar (redibujar la pantalla) y limpiar (el render no la pantalla)
+		SDL_RenderPresent(render);
+		SDL_RenderClear(render);
+
+		timerFps = SDL_GetTicks() - timerFps;
+	    if (timerFps < 1000 / FPS) {
+	        SDL_Delay((1000 / FPS) - timerFps);
+	    }
 	}
 	//SDL_Delay(1000);
 	// Limpar memoria dinamica y SDL
