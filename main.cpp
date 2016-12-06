@@ -9,11 +9,29 @@
 #define SCREEN_HEIGHT 600
 #define FPS 10
 
+void drawText(SDL_Renderer* render, char* f, char* text, int size, SDL_Color color, SDL_Rect dstRect){
+	TTF_Font* font = TTF_OpenFont(f, size);
+	SDL_Surface* textSurface = TTF_RenderText_Solid(font, text, color);
+	SDL_Texture* textTexture = SDL_CreateTextureFromSurface(render, textSurface);
+	SDL_RenderCopy(render, textTexture, NULL, &dstRect);
+	SDL_FreeSurface(textSurface);
+	textSurface = NULL;
+	TTF_CloseFont(font);
+	font = NULL;
+}
+
 int main(int argc, char **argv)
 {
 	// Iniciar SDL y variables principales
 	// Iniciar video y audio
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
+	// Iniciar la libreria de Sonidos
+	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
+	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024);
+	Mix_Chunk* laserSound = Mix_LoadWAV("laser1.wav");
+	Mix_VolumeChunk(laserSound, MIX_MAX_VOLUME/2);
+	// Iniciar la libreria de Fuentes TTF
+	TTF_Init();
 	// Crear ventana
 	SDL_Window* window = SDL_CreateWindow("Asteroids. by: carlosmart7104", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
 	// Crear el render, en la ventna "window", en el index "-1" (por default), sin flags
@@ -54,8 +72,8 @@ int main(int argc, char **argv)
 		Gun(double init_x, double init_y, double init_a){
 			this->t = SDL_GetTicks();
 			this->ang =  init_a;
-			double incx = 20 * cos(this->ang * 0.0174533);
-			double incy = 20 * sin(this->ang * 0.0174533);
+			double incx = 25 * cos(this->ang * 0.0174533);
+			double incy = 25 * sin(this->ang * 0.0174533);
 			this->x = init_x + incx;
 			this->y =  init_y + incy;
 		}
@@ -118,6 +136,7 @@ int main(int argc, char **argv)
 				if (state[SDL_SCANCODE_SPACE]) {
 					//SDL_Log("<SPACE> is pressed.\n");
 					bullets.push_back(Gun(player.x,player.y,player.angle));
+					Mix_PlayChannel(-1, laserSound, 0);
 				}
 				if (player.angle <= 0)
 					{
@@ -219,6 +238,11 @@ int main(int argc, char **argv)
 			SDL_RenderCopyEx(render, textureTileset, &srcRectGun1, &dstRectGunC4, gun1->ang + 90, &centerGun1, SDL_FLIP_NONE);
 		}
 
+		// Renderizar texto
+		SDL_Rect dstRect = {10,10,100,20};
+		SDL_Color color = {250,250,250};
+		drawText(render, "font.ttf", "Score: ", 10, color, dstRect); // renderer, font, text, size, x, y, w, h;
+
 		// Renderizar (redibujar la pantalla) y limpiar (el render no la pantalla)
 		SDL_RenderPresent(render);
 		SDL_RenderClear(render);
@@ -228,8 +252,7 @@ int main(int argc, char **argv)
 	        SDL_Delay((1000 / FPS) - timerFps);
 	    }
 	}
-	//SDL_Delay(1000);
-	// Limpar memoria dinamica y SDL
+
 	SDL_DestroyTexture(textureTileset);
 	textureTileset = NULL;
 	SDL_FreeSurface(surface);
@@ -238,6 +261,11 @@ int main(int argc, char **argv)
 	render = NULL;
 	SDL_DestroyWindow(window);
 	window = NULL;
+	Mix_FreeChunk(laserSound);
+	Mix_CloseAudio();
+	Mix_Quit();
+	TTF_Quit();
+    IMG_Quit();
     SDL_Quit();
 	return 0;
 }
