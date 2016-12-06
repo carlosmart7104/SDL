@@ -27,11 +27,17 @@ int main(int argc, char **argv)
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
 	// Iniciar la libreria de Sonidos
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
+	// Iniciar el modo de audio en modo por defecto
 	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024);
+	// Cargar el audio para el disparo
 	Mix_Chunk* laserSound = Mix_LoadWAV("laser1.wav");
-	Mix_VolumeChunk(laserSound, MIX_MAX_VOLUME/2);
+	// Establecer el volumen del disparo en 25%
+	Mix_VolumeChunk(laserSound, MIX_MAX_VOLUME/4);
+	// Cargar el audio para el soundtrack
 	Mix_Chunk* soundtrack = Mix_LoadWAV("space.mp3");
+	// Establecer el volumen del soundtrack en 50%
 	Mix_VolumeChunk(soundtrack, MIX_MAX_VOLUME/2);
+	// Comenzar la reproducción del soundtrack
 	Mix_PlayChannel(-1, soundtrack, -1);
 	// Iniciar la libreria de Fuentes TTF
 	TTF_Init();
