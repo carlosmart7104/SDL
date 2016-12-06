@@ -30,6 +30,9 @@ int main(int argc, char **argv)
 	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024);
 	Mix_Chunk* laserSound = Mix_LoadWAV("laser1.wav");
 	Mix_VolumeChunk(laserSound, MIX_MAX_VOLUME/2);
+	Mix_Chunk* soundtrack = Mix_LoadWAV("space.mp3");
+	Mix_VolumeChunk(soundtrack, MIX_MAX_VOLUME/2);
+	Mix_PlayChannel(-1, soundtrack, -1);
 	// Iniciar la libreria de Fuentes TTF
 	TTF_Init();
 	// Crear ventana
@@ -65,11 +68,11 @@ int main(int argc, char **argv)
 		}
 	} player;
 
-	class Gun
+	class Bullet
 	{
 	public:
 		double t = 0, x, y, ang, acel = 70.0f;
-		Gun(double init_x, double init_y, double init_a){
+		Bullet(double init_x, double init_y, double init_a){
 			this->t = SDL_GetTicks();
 			this->ang =  init_a;
 			double incx = 25 * cos(this->ang * 0.0174533);
@@ -92,11 +95,11 @@ int main(int argc, char **argv)
 			} else if (this->y >= SCREEN_HEIGHT){
 				this->y = 0;
 			}
-			//SDL_Log("gun1.x: %0.10lf, gun1.y: %0.10lf", this->x, this->y);	
+			//SDL_Log("Bullet1.x: %0.10lf, Bullet1.y: %0.10lf", this->x, this->y);	
 		}
-	};// gun1(300,150, 45);
+	};// Bullet1(300,150, 45);
 
-	std::vector<Gun> bullets;
+	std::vector<Bullet> bullets;
 
 	bool quit = false; // Variable para el ciclo del juego
 	SDL_Event e; // Variable para eventos
@@ -135,7 +138,7 @@ int main(int argc, char **argv)
 				}
 				if (state[SDL_SCANCODE_SPACE]) {
 					//SDL_Log("<SPACE> is pressed.\n");
-					bullets.push_back(Gun(player.x,player.y,player.angle));
+					bullets.push_back(Bullet(player.x,player.y,player.angle));
 					Mix_PlayChannel(-1, laserSound, 0);
 				}
 				if (player.angle <= 0)
@@ -221,21 +224,21 @@ int main(int argc, char **argv)
 		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayerC4, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
 
 		// Bullets
-		SDL_Point centerGun1 = {4,9};
-		SDL_Rect srcRectGun1 = {140,255,148-140,274-255};
+		SDL_Point centerBullet1 = {4,9};
+		SDL_Rect srcRectBullet1 = {140,255,148-140,274-255};
 		for (int i = 0; i < bullets.size(); ++i)
 		{
-			Gun* gun1 = &bullets[i];
-		    SDL_Rect dstRectGun1 = {gun1->x-4,gun1->y-9,8,19}; // Coordenadas y dimensiones en pantalla
-			SDL_Rect dstRectGunC1 = {gun1->x-4 - SCREEN_WIDTH,gun1->y-9,8,19};
-		    SDL_Rect dstRectGunC2 = {gun1->x-4 + SCREEN_WIDTH,gun1->y-9,8,19};
-		    SDL_Rect dstRectGunC3 = {gun1->x-4,gun1->y-9 - SCREEN_HEIGHT,8,19};
-		    SDL_Rect dstRectGunC4 = {gun1->x-4,gun1->y-9 + SCREEN_HEIGHT,8,19};
-			SDL_RenderCopyEx(render, textureTileset, &srcRectGun1, &dstRectGun1, gun1->ang + 90, &centerGun1, SDL_FLIP_NONE);
-			SDL_RenderCopyEx(render, textureTileset, &srcRectGun1, &dstRectGunC1, gun1->ang + 90, &centerGun1, SDL_FLIP_NONE);
-			SDL_RenderCopyEx(render, textureTileset, &srcRectGun1, &dstRectGunC2, gun1->ang + 90, &centerGun1, SDL_FLIP_NONE);
-			SDL_RenderCopyEx(render, textureTileset, &srcRectGun1, &dstRectGunC3, gun1->ang + 90, &centerGun1, SDL_FLIP_NONE);
-			SDL_RenderCopyEx(render, textureTileset, &srcRectGun1, &dstRectGunC4, gun1->ang + 90, &centerGun1, SDL_FLIP_NONE);
+			Bullet* Bullet1 = &bullets[i];
+		    SDL_Rect dstRectBullet1 = {Bullet1->x-4,Bullet1->y-9,8,19}; // Coordenadas y dimensiones en pantalla
+			SDL_Rect dstRectBulletC1 = {Bullet1->x-4 - SCREEN_WIDTH,Bullet1->y-9,8,19};
+		    SDL_Rect dstRectBulletC2 = {Bullet1->x-4 + SCREEN_WIDTH,Bullet1->y-9,8,19};
+		    SDL_Rect dstRectBulletC3 = {Bullet1->x-4,Bullet1->y-9 - SCREEN_HEIGHT,8,19};
+		    SDL_Rect dstRectBulletC4 = {Bullet1->x-4,Bullet1->y-9 + SCREEN_HEIGHT,8,19};
+			SDL_RenderCopyEx(render, textureTileset, &srcRectBullet1, &dstRectBullet1, Bullet1->ang + 90, &centerBullet1, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(render, textureTileset, &srcRectBullet1, &dstRectBulletC1, Bullet1->ang + 90, &centerBullet1, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(render, textureTileset, &srcRectBullet1, &dstRectBulletC2, Bullet1->ang + 90, &centerBullet1, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(render, textureTileset, &srcRectBullet1, &dstRectBulletC3, Bullet1->ang + 90, &centerBullet1, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(render, textureTileset, &srcRectBullet1, &dstRectBulletC4, Bullet1->ang + 90, &centerBullet1, SDL_FLIP_NONE);
 		}
 
 		// Renderizar texto
@@ -262,6 +265,7 @@ int main(int argc, char **argv)
 	SDL_DestroyWindow(window);
 	window = NULL;
 	Mix_FreeChunk(laserSound);
+	Mix_FreeChunk(soundtrack);
 	Mix_CloseAudio();
 	Mix_Quit();
 	TTF_Quit();
