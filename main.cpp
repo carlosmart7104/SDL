@@ -1,24 +1,19 @@
-#include <SDL.h> // Libreria Simple DirectiveMedia Layer (para graficos)
-#include <SDL_image.h> // Extension de SDL para multiples formatos de imagen
-#include <SDL_mixer.h>
-#include <SDL_ttf.h>
-#include <math.h>
-#include <vector>
-
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 #define FPS 10
 
-void drawText(SDL_Renderer* render, char* f, char* text, int size, SDL_Color color, SDL_Rect dstRect){
-	TTF_Font* font = TTF_OpenFont(f, size);
-	SDL_Surface* textSurface = TTF_RenderText_Solid(font, text, color);
-	SDL_Texture* textTexture = SDL_CreateTextureFromSurface(render, textSurface);
-	SDL_RenderCopy(render, textTexture, NULL, &dstRect);
-	SDL_FreeSurface(textSurface);
-	textSurface = NULL;
-	TTF_CloseFont(font);
-	font = NULL;
-}
+#include <stdlib.h> // rand()
+#include <math.h> // sin(), cos()
+#include <vector> // arrays
+#include <SDL.h> // Libreria Simple DirectiveMedia Layer (para graficos)
+#include <SDL_image.h> // Extension de SDL para multiples formatos de imagen
+#include <SDL_mixer.h>
+#include <SDL_ttf.h>
+#include "obj/player.h"
+#include "obj/bullet.h"
+#include "obj/asteroid.h"
+
+void drawText(SDL_Renderer* render, char* f, char* text, int size, SDL_Color color, SDL_Rect dstRect);
 
 int main(int argc, char **argv)
 {
@@ -31,10 +26,10 @@ int main(int argc, char **argv)
 	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024);
 	// Cargar el audio para el disparo
 	Mix_Chunk* laserSound = Mix_LoadWAV("laser1.wav");
-	// Establecer el volumen del disparo en 25%
-	Mix_VolumeChunk(laserSound, MIX_MAX_VOLUME/4);
 	// Cargar el audio para el soundtrack
 	Mix_Chunk* soundtrack = Mix_LoadWAV("space.mp3");
+	// Establecer el volumen del disparo en 25%
+	Mix_VolumeChunk(laserSound, MIX_MAX_VOLUME/4);
 	// Establecer el volumen del soundtrack en 50%
 	Mix_VolumeChunk(soundtrack, MIX_MAX_VOLUME/2);
 	// Comenzar la reproducción del soundtrack
@@ -52,65 +47,20 @@ int main(int argc, char **argv)
 	// Crear una textura en base a la superficie de la imagen (solo se puede renderizar texturas)
 	SDL_Texture* textureTileset = SDL_CreateTextureFromSurface(render, playerImg);
 
-	// Player
-	class Player
-	{
-	public:
-		double x = SCREEN_WIDTH / 2;
-		double y = SCREEN_HEIGHT / 2;
-		double angle = 0.0f;
-		double aceleracion = 0.1f; // pixels / seg^2
-		void update(){
-			//SDL_Log("player.x: %i",this->x);
-			//SDL_Log("player.y: %i",this->y);
-			//SDL_Log("player.angle: %0.10lf",this->angle);
-			double incx = this->aceleracion * cos(this->angle * 0.0174533);
-			double incy = this->aceleracion * sin(this->angle * 0.0174533);
-			//SDL_Log("aceleracion: %0.10lf", this->aceleracion);
-			//SDL_Log("incremento en x: %0.10lf",incx);
-			//SDL_Log("incremento en y: %0.10lf",incy);
-			this->x += incx;
-			this->y += incy;
-		}
-	} player;
-
-	class Bullet
-	{
-	public:
-		double t = 0, x, y, ang, acel = 70.0f;
-		Bullet(double init_x, double init_y, double init_a){
-			this->t = SDL_GetTicks();
-			this->ang =  init_a;
-			double incx = 25 * cos(this->ang * 0.0174533);
-			double incy = 25 * sin(this->ang * 0.0174533);
-			this->x = init_x + incx;
-			this->y =  init_y + incy;
-		}
-		void update(){
-			double incx = this->acel * cos(this->ang * 0.0174533);
-			double incy = this->acel * sin(this->ang * 0.0174533);
-			this->x += incx;
-			this->y += incy;
-			if (this->x <= 0){
-				this->x = SCREEN_WIDTH;
-			} else if (this->x >= SCREEN_WIDTH){
-				this->x = 0;
-			}
-			if (this->y <= 0){
-				this->y = SCREEN_HEIGHT;
-			} else if (this->y >= SCREEN_HEIGHT){
-				this->y = 0;
-			}
-			//SDL_Log("Bullet1.x: %0.10lf, Bullet1.y: %0.10lf", this->x, this->y);	
-		}
-	};// Bullet1(300,150, 45);
-
 	std::vector<Bullet> bullets;
+
+	std::vector<Asteroid> asteroids;
+
+	int num_asteroids_inicial = rand() % 5 + 3;
+	for (int i = 0; i < num_asteroids_inicial; ++i)
+	{
+		asteroids.push_back(Asteroid());
+	}
 
 	bool quit = false; // Variable para el ciclo del juego
 	SDL_Event e; // Variable para eventos
 	// Ciclo del juego
-	while(!quit){
+	while(!quit){ // mientras (sea verdad)
 		// Iniciar el conteo de tiempo para maximo de FPS
 		auto timerFps = SDL_GetTicks();
 
@@ -201,7 +151,6 @@ int main(int argc, char **argv)
 		}
 		// Update Objects
 		player.update();
-		// asteroids.update();
 		for (int i = 0; i < bullets.size(); ++i)
 		{
 			if (bullets[i].t <= SDL_GetTicks() - 800)
@@ -211,23 +160,41 @@ int main(int argc, char **argv)
 				bullets[i].update();
 			}
 		}
+		for (int i = 0; i < asteroids.size(); ++i)
+		{
+			asteroids[i].update();
+		}
 
 		// Mostrar en pantalla
-		// Player
-	    // Copiar la imagen en la surface de la ventana
-	    SDL_Point centerPlayer = {25,25};
-	    SDL_Rect srcRectPlayer = {168,156,209-168,193-156};
-	    SDL_Rect dstRectPlayer = {player.x-25,player.y-25,50,50}; // Coordenadas y dimensiones en pantalla
-	    // Cuatro copias para las fronteras
-	    SDL_Rect dstRectPlayerC1 = {player.x-25 - SCREEN_WIDTH,player.y-25,50,50};
-	    SDL_Rect dstRectPlayerC2 = {player.x-25 + SCREEN_WIDTH,player.y-25,50,50};
-	    SDL_Rect dstRectPlayerC3 = {player.x-25,player.y-25 - SCREEN_HEIGHT,50,50};
-	    SDL_Rect dstRectPlayerC4 = {player.x-25,player.y-25 + SCREEN_HEIGHT,50,50};
-		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayer, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
-		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayerC1, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
-		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayerC2, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
-		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayerC3, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
-		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayerC4, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+		// Asteroids
+		for (int i = 0; i < asteroids.size(); ++i)
+		{
+			SDL_Rect srcRectAsteroid1;
+			Asteroid* Asteroid1 = &asteroids[i];
+			int w, h;
+			if (Asteroid1->type == "a")
+			{
+				w = 160, h = 120;
+				srcRectAsteroid1 = {576,51,48,38};
+			} else if (Asteroid1->type == "b") {
+				w = 100, h = 80;
+				srcRectAsteroid1 = {530,90,40,35};
+			} else {
+				w = 40, h = 40;
+				srcRectAsteroid1 = {655,50,15,20};
+			}
+			SDL_Point centerAsteroid1 = {srcRectAsteroid1.w/2,srcRectAsteroid1.h/2};
+		    SDL_Rect dstRectAsteroid1 = {Asteroid1->x - centerAsteroid1.x,Asteroid1->y- centerAsteroid1.y,w,h}; // Coordenadas y dimensiones en pantalla
+			SDL_Rect dstRectAsteroidC1 = {Asteroid1->x - centerAsteroid1.x - SCREEN_WIDTH,Asteroid1->y- centerAsteroid1.y,w,h};
+		    SDL_Rect dstRectAsteroidC2 = {Asteroid1->x - centerAsteroid1.x + SCREEN_WIDTH,Asteroid1->y- centerAsteroid1.y,w,h};
+		    SDL_Rect dstRectAsteroidC3 = {Asteroid1->x - centerAsteroid1.x,Asteroid1->y- centerAsteroid1.y - SCREEN_HEIGHT,w,h};
+		    SDL_Rect dstRectAsteroidC4 = {Asteroid1->x - centerAsteroid1.x,Asteroid1->y- centerAsteroid1.y + SCREEN_HEIGHT,w,h};
+			SDL_RenderCopyEx(render, textureTileset, &srcRectAsteroid1, &dstRectAsteroid1, Asteroid1->giro + 90, &centerAsteroid1, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(render, textureTileset, &srcRectAsteroid1, &dstRectAsteroidC1, Asteroid1->giro + 90, &centerAsteroid1, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(render, textureTileset, &srcRectAsteroid1, &dstRectAsteroidC2, Asteroid1->giro + 90, &centerAsteroid1, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(render, textureTileset, &srcRectAsteroid1, &dstRectAsteroidC3, Asteroid1->giro + 90, &centerAsteroid1, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(render, textureTileset, &srcRectAsteroid1, &dstRectAsteroidC4, Asteroid1->giro + 90, &centerAsteroid1, SDL_FLIP_NONE);
+		}
 
 		// Bullets
 		SDL_Point centerBullet1 = {4,9};
@@ -247,10 +214,32 @@ int main(int argc, char **argv)
 			SDL_RenderCopyEx(render, textureTileset, &srcRectBullet1, &dstRectBulletC4, Bullet1->ang + 90, &centerBullet1, SDL_FLIP_NONE);
 		}
 
+		// Player
+	    // Copiar la imagen en la surface de la ventana
+	    SDL_Point centerPlayer = {25,25};
+	    SDL_Rect srcRectPlayer = {168,156,209-168,193-156};
+	    SDL_Rect dstRectPlayer = {player.x-25,player.y-25,50,50}; // Coordenadas y dimensiones en pantalla
+	    // Cuatro copias para las fronteras
+	    SDL_Rect dstRectPlayerC1 = {player.x-25 - SCREEN_WIDTH,player.y-25,50,50};
+	    SDL_Rect dstRectPlayerC2 = {player.x-25 + SCREEN_WIDTH,player.y-25,50,50};
+	    SDL_Rect dstRectPlayerC3 = {player.x-25,player.y-25 - SCREEN_HEIGHT,50,50};
+	    SDL_Rect dstRectPlayerC4 = {player.x-25,player.y-25 + SCREEN_HEIGHT,50,50};
+		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayer, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayerC1, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayerC2, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayerC3, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(render, textureTileset, &srcRectPlayer, &dstRectPlayerC4, player.angle + 90, &centerPlayer, SDL_FLIP_NONE);
+
 		// Renderizar texto
-		SDL_Rect dstRect = {10,10,100,20};
+		SDL_Rect dstRect = {10,SCREEN_HEIGHT - 25,100,15};
 		SDL_Color color = {250,250,250};
-		drawText(render, "font.ttf", "Score: ", 10, color, dstRect); // renderer, font, text, size, x, y, w, h;
+		drawText(render, "font.ttf", "Escape to Exit", 10, color, dstRect); // renderer, font, text, size, x, y, w, h;
+
+		dstRect = {SCREEN_WIDTH / 2 - 40,SCREEN_HEIGHT - 25,100,15};
+		drawText(render, "font.ttf", "Enter to Shot", 10, color, dstRect); // renderer, font, text, size, x, y, w, h;
+
+		dstRect = {SCREEN_WIDTH - 110,SCREEN_HEIGHT - 25,100,15};
+		drawText(render, "font.ttf", "Arrows to Move", 10, color, dstRect); // renderer, font, text, size, x, y, w, h;
 
 		// Renderizar (redibujar la pantalla) y limpiar (el render no la pantalla)
 		SDL_RenderPresent(render);
@@ -278,4 +267,15 @@ int main(int argc, char **argv)
     IMG_Quit();
     SDL_Quit();
 	return 0;
+}
+
+void drawText(SDL_Renderer* render, char* f, char* text, int size, SDL_Color color, SDL_Rect dstRect){
+	TTF_Font* font = TTF_OpenFont(f, size);
+	SDL_Surface* textSurface = TTF_RenderText_Solid(font, text, color);
+	SDL_Texture* textTexture = SDL_CreateTextureFromSurface(render, textSurface);
+	SDL_RenderCopy(render, textTexture, NULL, &dstRect);
+	SDL_FreeSurface(textSurface);
+	textSurface = NULL;
+	TTF_CloseFont(font);
+	font = NULL;
 }
