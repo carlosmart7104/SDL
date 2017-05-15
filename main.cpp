@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 	// Ciclo del juego
 	while(!quit){ // mientras (sea verdad)
 		// Iniciar el conteo de tiempo para maximo de FPS
-		auto timerFps = SDL_GetTicks();
+		Uint32 timerFps = SDL_GetTicks();
 
 		if(SDL_PollEvent(&e) != 0){
 			if(e.type == SDL_QUIT){
